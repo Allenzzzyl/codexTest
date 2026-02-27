@@ -1,1 +1,32 @@
-readme
+# my-blog-platform
+
+## Modules
+- `blog-common`: shared response model `R<T>`
+- `blog-user-service`: user registration/login service
+
+## Current user-service features
+- Register with BCrypt password hashing
+- Login with real JWT token generation
+- JWT token parsing and validation endpoint (`GET /api/user/token/validate`)
+- Global exception handling via `@RestControllerAdvice`
+- Backward compatibility for legacy MD5 password records (auto-upgrade to BCrypt after successful login)
+
+## Key config
+Update `my-blog-platform/blog-user-service/src/main/resources/application.yml`:
+- `spring.datasource.*`: set your MySQL connection
+- `jwt.secret`: base64 key (>= 32 bytes after decoding)
+- `jwt.expiration-seconds`: token TTL in seconds
+
+## Local prerequisites
+- Java 17+
+- Maven 3.9+
+- MySQL with database `blog_user_db`
+- Optional: Nacos server at `127.0.0.1:8848`
+
+## Build and test
+From `my-blog-platform/`:
+
+```bash
+mvn clean test
+mvn -pl blog-user-service spring-boot:run
+```

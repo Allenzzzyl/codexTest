@@ -8,6 +8,7 @@ import com.myblog.article.dto.ArticleUpdateDTO;
 import com.myblog.article.entity.Article;
 import com.myblog.article.exception.BizException;
 import com.myblog.article.mapper.ArticleMapper;
+import com.myblog.article.messaging.ArticleEventPublisher;
 import com.myblog.article.service.ArticleService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,12 @@ import java.time.LocalDateTime;
 @Service
 public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> implements ArticleService {
 
+    private final ArticleEventPublisher articleEventPublisher;
+
+    public ArticleServiceImpl(ArticleEventPublisher articleEventPublisher) {
+        this.articleEventPublisher = articleEventPublisher;
+    }
+
     @Override
     public Long create(ArticleCreateDTO dto) {
         Article article = new Article();
@@ -24,6 +31,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         article.setCreateTime(LocalDateTime.now());
         article.setUpdateTime(LocalDateTime.now());
         this.baseMapper.insert(article);
+        articleEventPublisher.publishUpsert(article);
         return article.getId();
     }
 
@@ -49,6 +57,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
         article.setUpdateTime(LocalDateTime.now());
         this.baseMapper.updateById(article);
+        articleEventPublisher.publishUpsert(article);
     }
 
     @Override
@@ -57,6 +66,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         if (rows == 0) {
             throw new BizException("Article not found");
         }
+        articleEventPublisher.publishDelete(articleId);
     }
 
     @Override

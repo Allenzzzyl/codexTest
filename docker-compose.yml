@@ -1,0 +1,102 @@
+version: '3.9'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: blog-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  redis:
+    image: redis:7.2
+    container_name: blog-redis
+    ports:
+      - "6379:6379"
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: blog-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: blog-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
+    container_name: blog-es
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+
+  nacos:
+    image: nacos/nacos-server:v2.3.2
+    container_name: blog-nacos
+    environment:
+      MODE: standalone
+    ports:
+      - "8848:8848"
+
+  blog-user-service:
+    build: ./my-blog-platform/blog-user-service
+    container_name: blog-user-service
+    depends_on:
+      - mysql
+      - nacos
+    ports:
+      - "8081:8081"
+
+  blog-article-service:
+    build: ./my-blog-platform/blog-article-service
+    container_name: blog-article-service
+    depends_on:
+      - mysql
+      - kafka
+      - nacos
+    ports:
+      - "8082:8082"
+
+  blog-search-service:
+    build: ./my-blog-platform/blog-search-service
+    container_name: blog-search-service
+    depends_on:
+      - kafka
+      - elasticsearch
+      - nacos
+    ports:
+      - "8083:8083"
+
+  blog-frontend:
+    build: ./blog-frontend
+    container_name: blog-frontend
+    depends_on:
+      - blog-user-service
+      - blog-article-service
+      - blog-search-service
+    ports:
+      - "5173:80"
+
+volumes:
+  mysql-data:
+  es-data:
